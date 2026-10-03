@@ -57,3 +57,13 @@ export function generateQuestion(maxDigits: number, spread: number): Question {
     // Practically unreachable fallback
     return { numbers: [1, 5, 6], answer: 1, key: "1-5-6" };
 }
+
+/** Explanation text for the review page, derived from the three numbers. */
+export function explain(numbers: number[]): string {
+    const [lo, mid, hi] = [...numbers].sort((a, b) => a - b);
+    const dHi = hi - mid;
+    const dLo = mid - lo;
+    const [far, farD, near, nearD] =
+        dHi > dLo ? [hi, dHi, lo, dLo] : [lo, dLo, hi, dHi];
+    return `Highest is ${hi}, lowest is ${lo}, middle is ${mid}. ${far} is ${farD} away from ${mid}, while ${near} is ${nearD} away — so ${far} is furthest.`;
+}
