@@ -1,8 +1,15 @@
 export type Settings = {
-    digits: number;
+    digits: number; // max digits
     minutes: number;
     questions: number; // 0 = unlimited until time runs out
     spread: number; // 0 = fully random
+};
+
+export type AttemptQuestion = {
+    numbers: [number, number, number]; // as displayed
+    correctAnswer: number;
+    userAnswer: number;
+    seconds: number; // time spent on this question
 };
 
 export type Attempt = {
@@ -12,6 +19,7 @@ export type Attempt = {
     total: number; // questions answered
     secondsUsed: number;
     settings: Settings;
+    questions?: AttemptQuestion[]; // missing on attempts saved before this update
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -33,8 +41,20 @@ export function loadAttempts(): Attempt[] {
     }
 }
 
+export function getAttempt(id: string): Attempt | null {
+    return loadAttempts().find((a) => a.id === id) ?? null;
+}
+
 export function saveAttempt(attempt: Attempt): Attempt[] {
     const updated = [attempt, ...loadAttempts()];
+    try {
+        localStorage.setItem(ATTEMPTS_KEY, JSON.stringify(updated));
+    } catch { }
+    return updated;
+}
+
+export function deleteAttempt(id: string): Attempt[] {
+    const updated = loadAttempts().filter((a) => a.id !== id);
     try {
         localStorage.setItem(ATTEMPTS_KEY, JSON.stringify(updated));
     } catch { }
