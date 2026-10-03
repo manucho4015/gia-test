@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { generateQuestion, Question } from "@/lib/questions";
-import type { Attempt, Settings } from "@/lib/storage";
+import type { Attempt, AttemptQuestion, Settings } from "@/lib/storage";
 
 export function formatTime(totalSeconds: number) {
     const m = Math.floor(totalSeconds / 60);
@@ -13,14 +13,21 @@ export function formatTime(totalSeconds: number) {
 export default function Test({
     settings,
     onFinish,
+    onExit,
 }: {
     settings: Settings;
     onFinish: (attempt: Attempt) => void;
+    onExit: () => void; // test abandoned: nothing is saved
 }) {
     const totalMs = settings.minutes * 60 * 1000;
     const startRef = useRef(Date.now());
+    const questionStartRef = useRef(Date.now());
     const seen = useRef(new Set<string>());
-    const stats = useRef({ correct: 0, answered: 0 });
+    const stats = useRef({
+        correct: 0,
+        answered: 0,
+        log: [] as AttemptQuestion[],
+    });
     const finished = useRef(false);
 
     const nextQuestion = (): Question => {
@@ -46,7 +53,14 @@ export default function Test({
             total: stats.current.answered,
             secondsUsed: Math.min(elapsed, Math.round(settings.minutes * 60)),
             settings,
+            questions: stats.current.log,
         });
+    };
+
+    const endEarly = () => {
+        if (!confirm("End this test now? It won't be saved.")) return;
+        finished.current = true; // stops the timer from saving anything
+        onExit();
     };
 
     // Timer
@@ -62,8 +76,16 @@ export default function Test({
 
     const answer = (n: number) => {
         if (finished.current) return;
+        const now = Date.now();
         stats.current.answered += 1;
         if (n === question.answer) stats.current.correct += 1;
+        stats.current.log.push({
+            numbers: question.numbers,
+            correctAnswer: question.answer,
+            userAnswer: n,
+            seconds: Math.round((now - questionStartRef.current) / 100) / 10,
+        });
+        questionStartRef.current = now;
 
         if (settings.questions > 0 && stats.current.answered >= settings.questions) {
             finish();
@@ -83,12 +105,8 @@ export default function Test({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [question]);
 
-    const answered = stats.current.answered;
     const limited = settings.questions > 0;
-
-    const progress = limited
-        ? (answered / settings.questions) * 100
-        : ((totalMs - msLeft) / totalMs) * 100;
+    const answered = stats.current.answered;
 
     return (
         <div className="space-y-4">
@@ -98,11 +116,19 @@ export default function Test({
                         ? `Question ${Math.min(answered + 1, settings.questions)} of ${settings.questions}`
                         : `Question ${answered + 1}`}
                 </span>
-                <div className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm shadow-sm">
-                    Time left:{" "}
-                    <span className="font-mono font-semibold">
-                        {formatTime(Math.ceil(msLeft / 1000))}
-                    </span>
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={endEarly}
+                        className="text-sm text-slate-500 underline hover:text-red-600"
+                    >
+                        End test
+                    </button>
+                    <div className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm shadow-sm">
+                        Time left:{" "}
+                        <span className="font-mono font-semibold">
+                            {formatTime(Math.ceil(msLeft / 1000))}
+                        </span>
+                    </div>
                 </div>
             </div>
 
