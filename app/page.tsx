@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import Test from "@/components/Test";
 import History from "@/components/History";
 import {
@@ -51,23 +52,33 @@ export default function Home() {
   const [attempts, setAttempts] = useState<Attempt[]>([]);
   const [last, setLast] = useState<Attempt | null>(null);
 
-  useEffect(() => {
-    setSettings(loadSettings());
-    setAttempts(loadAttempts());
-  }, []);
-
-  const start = () => {
-    const spread = Math.round(settings.spread) || 0;
+  const begin = (s: Settings) => {
+    const spread = Math.round(s.spread) || 0;
     const clean: Settings = {
-      digits: clamp(Math.round(settings.digits) || 3, 1, 8),
-      minutes: clamp(settings.minutes || 4, 0.5, 60),
-      questions: clamp(Math.round(settings.questions) || 0, 0, 500),
+      digits: clamp(Math.round(s.digits) || 3, 1, 8),
+      minutes: clamp(s.minutes || 4, 0.5, 60),
+      questions: clamp(Math.round(s.questions) || 0, 0, 500),
       spread: spread <= 0 ? 0 : Math.max(3, spread),
     };
     setSettings(clean);
     saveSettings(clean);
     setPhase("running");
   };
+
+  const start = () => begin(settings);
+
+  useEffect(() => {
+    const saved = loadSettings();
+    setSettings(saved);
+    setAttempts(loadAttempts());
+
+    // "Retake Test" from the review page lands here with ?start=1
+    if (new URLSearchParams(window.location.search).get("start") === "1") {
+      window.history.replaceState(null, "", "/");
+      begin(saved);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleFinish = useCallback((attempt: Attempt) => {
     setAttempts(saveAttempt(attempt));
@@ -88,7 +99,11 @@ export default function Home() {
 
       <div className="mx-auto max-w-3xl space-y-8 px-6 py-8">
         {phase === "running" && (
-          <Test settings={settings} onFinish={handleFinish} />
+          <Test
+            settings={settings}
+            onFinish={handleFinish}
+            onExit={() => setPhase("setup")}
+          />
         )}
 
         {phase === "done" && last && (
@@ -105,12 +120,20 @@ export default function Home() {
               {last.total > 0 &&
                 ` · ${(last.secondsUsed / last.total).toFixed(1)}s per question`}
             </div>
-            <button
-              onClick={() => setPhase("setup")}
-              className="mt-6 rounded-lg bg-slate-900 px-6 py-3 font-semibold text-white hover:bg-slate-700"
-            >
-              Back to setup
-            </button>
+            <div className="mt-6 flex justify-center gap-3">
+              <Link
+                href={`/attempts/${last.id}`}
+                className="rounded-lg border border-slate-300 bg-white px-6 py-3 font-semibold text-slate-900 hover:bg-slate-50"
+              >
+                Review answers
+              </Link>
+              <button
+                onClick={() => setPhase("setup")}
+                className="rounded-lg bg-slate-900 px-6 py-3 font-semibold text-white hover:bg-slate-700"
+              >
+                Back to setup
+              </button>
+            </div>
           </div>
         )}
 
