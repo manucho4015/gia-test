@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { Attempt } from "@/lib/storage";
 import { formatTime } from "./Test";
 
@@ -37,27 +38,31 @@ export default function History({
                     const pct = a.total ? Math.round((a.correct / a.total) * 100) : 0;
                     const perQ = a.total ? (a.secondsUsed / a.total).toFixed(1) : "–";
                     return (
-                        <li
-                            key={a.id}
-                            className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-5 py-4 shadow-sm"
-                        >
-                            <div>
-                                <div className="font-semibold text-slate-900">
-                                    {a.correct}/{a.total}{" "}
-                                    <span className="font-normal text-slate-500">({pct}%)</span>
+                        <li key={a.id}>
+                            <Link
+                                href={`/attempts/${a.id}`}
+                                className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-5 py-4 shadow-sm transition hover:border-slate-400"
+                            >
+                                <div>
+                                    <div className="font-semibold text-slate-900">
+                                        {a.correct}/{a.total}{" "}
+                                        <span className="font-normal text-slate-500">({pct}%)</span>
+                                    </div>
+                                    <div className="text-sm text-slate-500">
+                                        {new Date(a.date).toLocaleString()}
+                                    </div>
+                                    <div className="text-xs text-slate-400">
+                                        up to {a.settings.digits}-digit ·{" "}
+                                        {a.settings.spread > 0
+                                            ? `spread ${a.settings.spread}`
+                                            : "fully random"}
+                                    </div>
                                 </div>
-                                <div className="text-sm text-slate-500">
-                                    {new Date(a.date).toLocaleString()}
+                                <div className="text-right font-mono text-sm text-slate-700">
+                                    <div>{formatTime(a.secondsUsed)}</div>
+                                    <div className="text-xs text-slate-400">{perQ}s / question</div>
                                 </div>
-                                <div className="text-xs text-slate-400">
-                                    up to {a.settings.digits}-digit ·{" "}
-                                    {a.settings.spread > 0 ? `spread ${a.settings.spread}` : "fully random"}
-                                </div>
-                            </div>
-                            <div className="text-right font-mono text-sm text-slate-700">
-                                <div>{formatTime(a.secondsUsed)}</div>
-                                <div className="text-xs text-slate-400">{perQ}s / question</div>
-                            </div>
+                            </Link>
                         </li>
                     );
                 })}
